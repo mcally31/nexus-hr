@@ -1,0 +1,10 @@
+{
+  "name": "nexus-hr",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "echo \"Run dev in client or server workspace\"",
+    "lint": "echo \"No root lint\""
+  }
+}
