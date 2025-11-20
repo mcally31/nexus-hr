@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  HR_ADMIN
+  MANAGER
+  EMPLOYEE
+  FINANCE
+  RECRUITER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum LeaveType {
+  HOLIDAY
+  SICKNESS
+  CARRY_OVER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+enum PaymentType {
+  PAID
+  UNPAID
+}
+
+model Tenant {
+  id          String      @id @default(uuid())
+  name        String
+  users       User[]
+  departments Department[]
+  leavePolicies LeavePolicy[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  tenantId  String
+  users     User[]
+}
+
+model User {
+  id            String       @id @default(uuid())
+  tenant        Tenant       @relation(fields: [tenantId], references: [id])
+  tenantId      String
+  email         String       @unique
+  passwordHash  String
+  role          UserRole
+  firstName     String
+  lastName      String
+  department    Department?  @relation(fields: [departmentId], references: [id])
+  departmentId  String?
+  manager       User?        @relation("ManagerReports", fields: [managerId], references: [id])
+  managerId     String?
+  reports       User[]       @relation("ManagerReports")
+  status        UserStatus   @default(ACTIVE)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  profile       Profile?
+  leaveRequests LeaveRequest[]
+  leaveBalances LeaveBalance[]
+  sicknessReports SicknessReport[]
+  expenses      Expense[]
+  documents     Document[]
+  timesheets    Timesheet[]
+  auditLogs     AuditLog[]
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique
+  phone     String?
+  jobTitle  String?
+  location  String?
+  avatarUrl String?
+}
+
+model LeavePolicy {
+  id        String   @id @default(uuid())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  tenantId  String
+  name      String
+  days      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  leaveBalances LeaveBalance[]
+}
+
+model LeaveBalance {
+  id          String      @id @default(uuid())
+  user        User        @relation(fields: [userId], references: [id])
+  userId      String
+  policy      LeavePolicy @relation(fields: [policyId], references: [id])
+  policyId    String
+  remaining   Float       @default(0)
+  carriedOver Float       @default(0)
+}
+
+model LeaveRequest {
+  id           String      @id @default(uuid())
+  user         User        @relation(fields: [userId], references: [id])
+  userId       String
+  type         LeaveType
+  startDate    DateTime
+  endDate      DateTime
+  durationDays Float
+  status       LeaveStatus
+  paymentType  PaymentType?
+  reason       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model SicknessReport {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  startDate DateTime
+  endDate   DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  amount      Float
+  description String
+  category    String
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  title     String
+  url       String
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  tenantId  String
+  createdAt DateTime @default(now())
+}
+
+model Asset {
+  id        String   @id @default(uuid())
+  name      String
+  assignedTo User? @relation(fields: [assignedToId], references: [id])
+  assignedToId String?
+  createdAt DateTime @default(now())
+}
+
+model Timesheet {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  hours     Float
+  weekStart DateTime
+  createdAt DateTime @default(now())
+}
+
+model JobPost {
+  id        String   @id @default(uuid())
+  title     String
+  department Department? @relation(fields: [departmentId], references: [id])
+  departmentId String?
+  createdAt DateTime @default(now())
+  candidates Candidate[]
+}
+
+model Candidate {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  jobPost   JobPost @relation(fields: [jobPostId], references: [id])
+  jobPostId String
+  status    String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  createdAt DateTime @default(now())
+  metadata  Json?
+}
